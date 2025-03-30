@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ваш проект</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Подключение файла стилей -->
+</head>
+<body>
+    <!-- Стартовый экран -->
+    <div class="slide1" id="start_screen">
+        <h2>Приступить к генерации документа</h2>
+        <button id="start-button">Начать</button>
+    </div>
+
+    <!-- Основное содержимое (скрыто по умолчанию) -->
+    <div class="slides hidden" id="main-content">
+        <div class="slide2" id="slide2">
+            <h2>1. Выберите тип документа</h2>
+            <button class="toggle-button" data-section="section1" data-target="statement">Заявление</button>
+            <button class="toggle-button" data-section="section1" data-target="appeal">Обращение</button>
+            <button class="toggle-button" data-section="section1" data-target="official">Офиц. документ</button>
+            <button class="next-button">Далее</button>
+            <button class="previous-button">Назад</button>
+        </div>
+
+        <div class="slide2" id="slide3">
+            <h2>2. Давайте знакомиться</h2>
+            <p>Выберите тип лица:</p>
+            <button class="toggle-button" data-section="section2" data-target="individual">Физ. лицо</button>
+            <button class="toggle-button" data-section="section2" data-target="legal">Юр. лицо</button>
+            <div class="content output" data-section="section2" id="individual">
+                <p>Введите ваше имя и контактные данные:</p>
+                <input type="text" placeholder="Ваше имя" data-section="section2" data-field="name">
+                <input type="text" placeholder="Контактные данные" data-section="section2" data-field="contact">
+            </div>
+            <div class="content output" data-section="section2" id="legal">
+                <p>Введите название компании и должность:</p>
+                <input type="text" placeholder="Название компании" data-section="section2" data-field="company">
+                <input type="text" placeholder="Должность" data-section="section2" data-field="position">
+            </div>
+            <button class="next-button">Далее</button>
+            <button class="previous-button">Назад</button>
+        </div>
+
+        <div class="slide2" id="slide4">
+            <h2>3. Кто они?</h2>
+            <p>Выберите тип:</p>
+            <button class="toggle-button" data-section="section3" data-target="third-individual">Физ. лицо</button>
+            <button class="toggle-button" data-section="section3" data-target="third-legal">Юр. лицо</button>
+            <div class="content output" data-section="section3" id="third-individual">
+                <input type="text" placeholder="ФИО" data-section="section3" data-field="name">
+            </div>
+            <div class="content output" data-section="section3" id="third-legal">
+                <input type="text" placeholder="Название организации" data-section="section3" data-field="organization">
+            </div>
+            <button class="next-button">Далее</button>
+            <button class="previous-button">Назад</button>
+        </div>
+
+        <div class="slide2" id="slide5">
+            <h2>4. Фактическое описание ситуации</h2>
+            <p>Всегда указывайте дату каждого события:</p>
+            <h3>Описание договорённостей между сторонами</h3>
+            <textarea class="slide-textarea" data-section="section4" data-field="agreements" placeholder="Какие договорённости были достигнуты?.."></textarea>
+        
+            <h3>Суть проблемы и действия ответчика</h3>
+            <textarea class="slide-textarea" data-section="section4" data-field="problem" placeholder="Опишите проблему и какие действия предпринял ответчик..."></textarea>
+            <button class="next-button">Далее</button>
+            <button class="previous-button">Назад</button>
+        </div>
+
+        <div class="slide2" id="slide6">
+            <h2>5. Документальные доказательства</h2>
+            <p>Отметьте, какие доказательства у вас есть:</p>
+        
+            <label>
+                <input type="checkbox" data-section="section5" data-field="correspondence">
+                Переписка
+            </label>
+            <label>
+                <input type="checkbox" data-section="section5" data-field="photos">
+                Фотографии
+            </label>
+            <label>
+                <input type="checkbox" data-section="section5" data-field="witnesses">
+                Свидетели
+            </label>
+        
+            <button onclick="openModal()">Открыть OCR</button>
+
+            <div id="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 80%; background-color: white;">
+                    <iframe src="ocr.html" style="width: 100%; height: 100%; border: none;"></iframe>
+                    <button onclick="closeModal()">Закрыть</button>
+                </div>
+            </div>
+
+            <script>
+                function openModal() {
+                    document.getElementById('modal').style.display = 'block';
+                }
+
+                function closeModal() {
+                    document.getElementById('modal').style.display = 'none';
+                }
+            </script>
+
+
+        
+            <button class="next-button">Далее</button>
+            <button class="previous-button">Назад</button>
+        </div>
+       
+        
+        <div class="slide2" id="slide7">
+            <h2>6. Нарушенные законы</h2>
+            <p>Хорошо подумайте и напишите: какие законы были нарушены?</p>
+        
+            <p><strong>Описание ситуации:</strong></p>
+            <div class="situation-summary" id="situation-summary"></div> <!-- Здесь будет текст из раздела 4 -->
+        
+            <textarea class="slide-textarea" data-section="section6" placeholder="Введите предполагаемые нарушения..."></textarea>
+        
+            <button id="generate-laws">Сгенерировать список законов</button>
+        
+            <div id="laws-list"></div> <!-- Здесь будут кнопки с законами -->
+        
+            <div id="law-details"></div> <!-- Здесь будет текст выбранного закона -->
+        
+            <button id="submit-button">Сгенерировать документ</button>
+            <button class="previous-button">Назад</button>
+        </div>
+    </div>    
+
+    <div class="slide3" id="slide_result_container">
+        <h2>Тут будут результаты</h2>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

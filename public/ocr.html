@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR with Tesseract.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.0.0-beta.2/dist/tesseract.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <style>
+        .ocr-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border: 2px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .ocr-image {
+            margin-right: 20px;
+            max-width: none;
+            max-height: none;
+            width: auto;
+            height: auto;
+        }
+
+        .ocr-text {
+            width: 400px;
+            min-width: 400px;
+            min-height: 100px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            resize: vertical;
+            overflow: auto;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            text-align: center;
+        }
+
+        .modal-content input {
+            padding: 10px;
+            margin: 10px;
+            width: 80%;
+        }
+
+        .modal-content button {
+            padding: 10px;
+            margin: 5px;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Загрузите фото или PDF</h1>
+
+    <label for="language">Select language:</label>
+    <select id="language">
+        <option value="eng">English</option>
+        <option value="rus">Русский</option>
+        <option value="srp">Srpski (Serbian)</option>
+    </select>
+
+    <input type="file" id="imageInput" accept="image/*,application/pdf" multiple />
+    <button id="startBtn">Start OCR</button>
+
+    <div id="fileListContainer"></div>
+
+    <div id="progress"></div>
+    <div id="result"></div>
+
+    <!-- Модальное окно для ввода названия документа -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <h2>Введите название документа</h2>
+            <input type="text" id="docNameInput" placeholder="Название документа" />
+            <br />
+            <button id="saveDocBtn">Далее</button>
+            <button id="closeModalBtn">Закрыть</button>
+            <p id="modalMessage"></p>
+        </div>
+    </div>
+
+    <!-- Кнопка "Сохранить как один документ" -->
+    <button id="saveAsOneDocBtn">Сохранить как один документ</button>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const fileListContainer = document.getElementById('fileListContainer');
+        const startBtn = document.getElementById('startBtn');
+        const progressDiv = document.getElementById('progress');
+        const resultDiv = document.getElementById('result');
+        const languageSelect = document.getElementById('language');
+        const modal = document.getElementById('modal');
+        const docNameInput = document.getElementById('docNameInput');
+        const saveDocBtn = document.getElementById('saveDocBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const modalMessage = document.getElementById('modalMessage');
+        const saveAsOneDocBtn = document.getElementById('saveAsOneDocBtn'); // кнопка "Сохранить как один документ"
+
+        let fileList = [];
+
+        imageInput.addEventListener('change', (event) => {
+            const files = Array.from(event.target.files);
+            fileList = fileList.concat(files);
+            renderFileList();
+        });
+
+        function renderFileList() {
+            fileListContainer.innerHTML = '';
+            fileList.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.innerHTML = `${file.name} <button onclick="removeFile(${index})">Удалить</button>`;
+                fileListContainer.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(index) {
+            fileList.splice(index, 1);
+            renderFileList();
+        }
+
+        startBtn.addEventListener('click', () => {
+            if (fileList.length === 0) {
+                alert('Файлы не выбраны');
+                return;
+            }
+
+            const language = languageSelect.value;
+            let currentFileIndex = 0;
+
+            const processNextFile = () => {
+                if (currentFileIndex >= fileList.length) {
+                    return;
+                }
+
+                const file = fileList[currentFileIndex];
+                currentFileIndex++;
+
+                if (file.type === 'application/pdf') {
+                    convertPdfToImage(file).then(images => {
+                        processImages(images, language, processNextFile);
+                    }).catch(err => {
+                        console.error(err);
+                        resultDiv.innerHTML += `<h2>Error:</h2><pre>${err}</pre>`;
+                        processNextFile();
+                    });
+                } else {
+                    recognizeText(file, language, processNextFile);
+                }
+            };
+
+            processNextFile();
+        });
+
+        async function convertPdfToImage(pdfFile) {
+            const pdfData = await pdfFile.arrayBuffer();
+            const pdfDoc = await pdfjsLib.getDocument(pdfData).promise;
+            const numPages = pdfDoc.numPages;
+            const images = [];
+
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                const page = await pdfDoc.getPage(pageNum);
+                const scale = 1.5;
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                }).promise;
+
+                images.push(canvas.toDataURL());
+            }
+
+            return images;
+        }
+
+        function recognizeText(imageFile, language, callback) {
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const dataUrl = event.target.result;
+                Tesseract.recognize(
+                    dataUrl,
+                    language,
+                    {
+                        logger: (m) => {
+                            console.log(m);
+                            progressDiv.innerHTML = `Progress: ${(m.progress * 100).toFixed(2)}%`;
+                        }
+                    }
+                ).then(({ data: { text } }) => {
+                    displayResult(dataUrl, text);
+                    callback();
+                }).catch((err) => {
+                    console.error(err);
+                    resultDiv.innerHTML += `<h2>Error:</h2><pre>${err}</pre>`;
+                    callback();
+                });
+            };
+
+            reader.readAsDataURL(imageFile);
+        }
+
+        function processImages(images, language, callback) {
+            let currentPageIndex = 0;
+
+            const processNextImage = () => {
+                if (currentPageIndex >= images.length) {
+                    callback();
+                    return;
+                }
+
+                const image = images[currentPageIndex];
+                currentPageIndex++;
+
+                recognizeText(image, language, processNextImage);
+            };
+
+            processNextImage();
+        }
+
+        function displayResult(image, text) {
+            const container = document.createElement('div');
+            container.classList.add('ocr-container');
+
+            const imgElement = document.createElement('img');
+            imgElement.src = image;
+            imgElement.classList.add('ocr-image');
+            container.appendChild(imgElement);
+
+            const textElement = document.createElement('textarea');
+            textElement.classList.add('ocr-text');
+            textElement.value = text;
+            container.appendChild(textElement);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Удалить';
+            deleteButton.addEventListener('click', () => {
+                container.remove();
+            });
+
+            container.appendChild(deleteButton);
+
+            resultDiv.appendChild(container);
+        }
+
+        // Открытие модального окна при нажатии на кнопку "Сохранить как один документ"
+        saveAsOneDocBtn.addEventListener('click', () => {
+            openModal();
+        });
+
+        // Открытие модального окна
+        function openModal() {
+            modal.style.display = 'block';
+        }
+
+        // Закрытие модального окна
+        closeModalBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Кнопка "Далее" в модальном окне
+        saveDocBtn.addEventListener('click', () => {
+            const docName = docNameInput.value.trim();
+            if (docName) {
+                modalMessage.textContent = "Отлично, можешь переходить к следующему этапу";
+                setTimeout(() => {
+                    modal.style.display = 'none'; // Закрыть модальное окно через некоторое время
+                }, 2000); // Закроем окно через 2 секунды
+            } else {
+                alert('Пожалуйста, введите название документа');
+            }
+        });
+
+    </script>
+</body>
+</html>
+

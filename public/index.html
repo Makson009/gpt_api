@@ -1,12 +1,41 @@
+<script>
+    window.addEventListener("DOMContentLoaded", async () => {
+      // Используем имя пользователя 'test' по умолчанию
+      const userId = currentUser?.userId || 'test';  // Подставляем 'test' если currentUser.userId не задан
+    
+      try {
+        // Отправляем POST-запрос на сервер с именем пользователя
+        const response = await fetch("/api/remaining-requests", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userId })  // Отправляем имя пользователя
+        });
+    
+        // Получаем ответ от сервера
+        const data = await response.json();
+        
+        // Выводим количество оставшихся попыток
+        document.getElementById("request-count").innerText = `Осталось попыток генерации документа: ${data.remaining}`;
+      } catch (error) {
+        console.error("Ошибка при получении количества попыток:", error);
+      }
+    });
+</script>
+  
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ваш проект</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Подключение файла стилей -->
+    <!-- <link rel="stylesheet" href="styles.css"> Подключение файла стилей -->
 </head>
 <body>
+    <div id="request-count">Загрузка количества доступных вам попыток...</div>
+
     <!-- Стартовый экран -->
     <div class="slide1" id="start_screen">
         <h2>Приступить к генерации документа</h2>
